@@ -12,6 +12,8 @@ import MeetingUtil from '@webex/plugin-meetings/src/meeting/util';
 import createEffectsState from '@webex/plugin-meetings/src/meeting/effectsState';
 import LoggerProxy from '@webex/plugin-meetings/src/common/logs/logger-proxy';
 import LoggerConfig from '@webex/plugin-meetings/src/common/logs/logger-config';
+import LLM from '@webex/internal-plugin-llm';
+import Mercury from '@webex/internal-plugin-mercury';
 
 describe('plugin-meetings', () => {
   const logger = {
@@ -157,7 +159,9 @@ describe('plugin-meetings', () => {
   beforeEach(() => {
     webex = new MockWebex({
       children: {
-        meetings: Meetings
+        meetings: Meetings,
+        llm: LLM,
+        mercury: Mercury,
       }
     });
     meeting = new Meeting(

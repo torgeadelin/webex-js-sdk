@@ -121,6 +121,18 @@ MemberUtil.isHandRaised = (participant: any) => {
 };
 
 /**
+ * @param {Object} participant the locus participant
+ * @returns {Boolean}
+ */
+MemberUtil.isSupportsBreakouts = (participant) => {
+  if (!participant) {
+    throw new ParameterError('Breakout support could not be processed, participant is undefined.');
+  }
+
+  return !participant.doesNotSupportBreakouts;
+};
+
+/**
  * utility method for audio/video muted status
  * @param {String} status
  * @param {String} accessor
