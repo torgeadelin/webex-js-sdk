@@ -871,9 +871,9 @@ export default class Members extends StatelessWebexPlugin {
    * @param {number} csi
    * @returns {Member}
    */
-  findMemberByCsi(csi) {
+  findMemberByCsi(csi) : any {
     return Object.values(this.membersCollection.getAll())
-      .find((member) => (
+      .find((member: any) => (
         member.participant?.devices?.find((device) => (
           device.csis?.find((memberCsi) => memberCsi === csi)))));
   }

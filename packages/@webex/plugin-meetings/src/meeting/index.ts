@@ -41,6 +41,7 @@ import {
   EVENT_TRIGGERS,
   EVENT_TYPES,
   EVENTS,
+  BREAKOUTS,
   FLOOR_ACTION,
   FULL_STATE,
   LAYOUT_TYPES,
@@ -77,13 +78,14 @@ import {RemoteMediaManager, Event as RemoteMediaManagerEvent} from '../multistre
 import {MultistreamMedia} from '../multistream/multistreamMedia';
 import {SkinTones, Reactions} from '../reactions/reactions';
 import {Reaction, ReactionType, SkinToneType} from '../reactions/reactions.type';
+import Breakouts from '../breakouts';
 
 import InMeetingActions from './in-meeting-actions';
 
 
 const {isBrowser} = BrowserDetection();
 
-const logRequest = (request: any, { header = '', success = '', failure = '' }) => {
+const logRequest = (request: any, {header = '', success = '', failure = ''}) => {
   LoggerProxy.logger.info(header);
 
   return request
@@ -395,90 +397,174 @@ export const MEDIA_UPDATE_TYPE = {
  */
 export default class Meeting extends StatelessWebexPlugin {
   attrs: any;
+
   audio: any;
+
+  breakouts: any;
+
   conversationUrl: string;
+
   correlationId: string;
+
   destination: string;
+
   destinationType: string;
+
   deviceUrl: string;
+
   effects: any;
+
   hostId: string;
+
   id: string;
+
   isMultistream: boolean;
+
   locusUrl: string;
+
   mediaConnections: any[];
+
   mediaId?: string;
+
   meetingFiniteStateMachine: any;
+
   meetingInfo: object;
+
   meetingRequest: MeetingRequest;
+
   members: Members;
+
   options: object;
+
   orgId: string;
+
   owner: string;
+
   partner: any;
+
   policy: string;
+
   reconnectionManager: ReconnectionManager;
+
   resource: string;
+
   roap: Roap;
+
   roapSeq: number;
+
   sipUri: string;
+
   type: string;
+
   userId: string;
+
   video: any;
+
   callEvents: any[];
+
   deferJoin: Promise<any>;
+
   dialInDeviceStatus: string;
+
   dialInUrl: string;
+
   dialOutDeviceStatus: string;
+
   dialOutUrl: string;
+
   fetchMeetingInfoTimeoutId: NodeJS.Timeout;
+
   floorGrantPending: boolean;
+
   hasJoinedOnce: boolean;
+
   hasWebsocketConnected: boolean;
+
   inMeetingActions: InMeetingActions;
+
   isLocalShareLive: boolean;
+
   isRoapInProgress: boolean;
+
   isSharing: boolean;
+
   keepAliveTimerId: NodeJS.Timeout;
+
   lastVideoLayoutInfo: any;
+
   locusInfo: any;
+
   media: MultistreamMedia;
+
   mediaProperties: MediaProperties;
+
   mediaRequestManagers: {
     audio: MediaRequestManager;
     video: MediaRequestManager;
   };
+
   meetingInfoFailureReason: string;
+
   networkQualityMonitor: NetworkQualityMonitor;
+
   networkStatus: string;
+
   passwordStatus: string;
+
   queuedMediaUpdates: any[];
+
   recording: any;
+
   remoteMediaManager: RemoteMediaManager | null;
+
   requiredCaptcha: any;
+
   receiveSlotManager: ReceiveSlotManager;
+
   shareStatus: string;
+
   statsAnalyzer: StatsAnalyzer;
+
   transcription: Transcription;
+
   updateMediaConnections: (mediaConnections: any[]) => void;
+
   endCallInitiateJoinReq: any;
+
   endJoinReqResp: any;
+
   endLocalSDPGenRemoteSDPRecvDelay: any;
+
   joinedWith: any;
+
   locusId: any;
+
   startCallInitiateJoinReq: any;
+
   startJoinReqResp: any;
+
   startLocalSDPGenRemoteSDPRecvDelay: any;
+
   wirelessShare: any;
+
   guest: any;
+
   meetingJoinUrl: any;
+
   meetingNumber: any;
+
   meetingState: any;
+
   permissionToken: any;
+
   resourceId: any;
+
   resourceUrl: string;
+
   selfId: string;
+
   state: any;
+
   namespace = MEETINGS;
 
   /**
@@ -564,6 +650,14 @@ export default class Meeting extends StatelessWebexPlugin {
      */
     // TODO: needs to be defined as a class
     this.meetingInfo = {};
+    /**
+     * @instance
+     * @type {Breakouts}
+     * @public
+     * @memberof Meeting
+     */
+    // @ts-ignore
+    this.breakouts = new Breakouts({}, {parent: this.webex});
     /**
      * helper class for managing receive slots (for multistream media connections)
      */
@@ -1022,7 +1116,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @memberof Meeting
    * @returns {Promise}
    */
-  public async fetchMeetingInfo({ password = null, captchaCode = null }: { password?: string; captchaCode?: string }) {
+  public async fetchMeetingInfo({password = null, captchaCode = null}: { password?: string; captchaCode?: string }) {
     // when fetch meeting info is called directly by the client, we want to clear out the random timer for sdk to do it
     if (this.fetchMeetingInfoTimeoutId) {
       clearTimeout(this.fetchMeetingInfoTimeoutId);
@@ -1189,6 +1283,49 @@ export default class Meeting extends StatelessWebexPlugin {
     this.setUpLocusInfoMeetingInfoListener();
     this.setUpLocusInfoAssignHostListener();
     this.setUpLocusInfoMediaInactiveListener();
+    this.setUpBreakoutsListener();
+  }
+
+  /**
+   * Set up the listeners for breakouts
+   * @returns {undefined}
+   * @private
+   * @memberof Meeting
+   */
+  setUpBreakoutsListener() {
+    this.breakouts.on(BREAKOUTS.EVENTS.BREAKOUTS_CLOSING, () => {
+      Trigger.trigger(
+        this,
+        {
+          file: 'meeting/index',
+          function: 'setUpBreakoutsListener'
+        },
+        EVENT_TRIGGERS.MEETING_BREAKOUTS_CLOSING,
+      );
+    });
+
+    this.breakouts.on(BREAKOUTS.EVENTS.MESSAGE, (messageEvent) => {
+      Trigger.trigger(
+        this,
+        {
+          file: 'meeting/index',
+          function: 'setUpBreakoutsListener'
+        },
+        EVENT_TRIGGERS.MEETING_BREAKOUTS_MESSAGE,
+        messageEvent
+      );
+    });
+
+    this.breakouts.on(BREAKOUTS.EVENTS.MEMBERS_UPDATE, () => {
+      Trigger.trigger(
+        this,
+        {
+          file: 'meeting/index',
+          function: 'setUpBreakoutsListener'
+        },
+        EVENT_TRIGGERS.MEETING_BREAKOUTS_UPDATE,
+      );
+    });
   }
 
   /**
@@ -1639,7 +1776,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @private
    * @memberof Meeting
    */
-   private setupLocusControlsListener() {
+  private setupLocusControlsListener() {
     this.locusInfo.on(LOCUSINFO.EVENTS.CONTROLS_RECORDING_UPDATED,
       ({state, modifiedBy, lastModified}) => {
         let event;
@@ -1695,7 +1832,6 @@ export default class Meeting extends StatelessWebexPlugin {
 
     this.locusInfo.on(LOCUSINFO.EVENTS.CONTROLS_MEETING_TRANSCRIBE_UPDATED,
       ({caption, transcribing}) => {
-
         // @ts-ignore - config coming from registerPlugin
         if (transcribing && this.transcription && this.config.receiveTranscription) {
           this.receiveTranscription();
@@ -1711,6 +1847,19 @@ export default class Meeting extends StatelessWebexPlugin {
             {caption, transcribing}
           );
         }
+      });
+
+    this.locusInfo.on(LOCUSINFO.EVENTS.CONTROLS_MEETING_BREAKOUT_UPDATED,
+      ({breakout}) => {
+        this.breakouts.updateBreakout(breakout);
+        Trigger.trigger(
+          this,
+          {
+            file: 'meeting/index',
+            function: 'setupLocusControlsListener'
+          },
+          EVENT_TRIGGERS.MEETING_BREAKOUTS_UPDATE,
+        );
       });
 
     this.locusInfo.on(LOCUSINFO.EVENTS.CONTROLS_ENTRY_EXIT_TONE_UPDATED,
@@ -1735,7 +1884,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @private
    * @memberof Meeting
    */
-   private setUpLocusMediaSharesListener() {
+  private setUpLocusMediaSharesListener() {
     // Will get triggered on local and remote share
     this.locusInfo.on(EVENTS.LOCUS_INFO_UPDATE_MEDIA_SHARES, (payload) => {
       const {content: contentShare, whiteboard: whiteboardShare} = payload.current;
@@ -1969,6 +2118,7 @@ export default class Meeting extends StatelessWebexPlugin {
   private setUpLocusUrlListener() {
     this.locusInfo.on(EVENTS.LOCUS_INFO_UPDATE_URL, (payload) => {
       this.members.locusUrlUpdate(payload);
+      this.breakouts.locusUrlUpdate(payload);
       this.locusUrl = payload;
       this.locusId = this.locusUrl?.split('/').pop();
     });
@@ -2060,6 +2210,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @returns {void}
    */
   handleDataChannelUrlChange(datachannelUrl) {
+    // @ts-ignore - config coming from registerPlugin
     if (datachannelUrl && this.config.enableAutomaticLLM) {
       // Defer this as updateLLMConnection relies upon this.locusInfo.url which is only set
       // after the MEETING_INFO_UPDATED callback finishes
@@ -2238,6 +2389,18 @@ export default class Meeting extends StatelessWebexPlugin {
         {
           payload
         }
+      );
+    });
+
+    this.locusInfo.on(LOCUSINFO.EVENTS.SELF_MEETING_BREAKOUTS_CHANGED, (payload) => {
+      this.breakouts.updateBreakoutSessions(payload);
+      Trigger.trigger(
+        this,
+        {
+          file: 'meeting/index',
+          function: 'setUpLocusInfoSelfListener'
+        },
+        EVENT_TRIGGERS.MEETING_BREAKOUTS_UPDATE,
       );
     });
 
@@ -2623,7 +2786,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @public
    * @memberof Meeting
    */
-  public uploadLogs(options: object = { file: 'meeting/index', function: 'uploadLogs' }) {
+  public uploadLogs(options: object = {file: 'meeting/index', function: 'uploadLogs'}) {
     Trigger.trigger(
       this,
       options,
@@ -3725,6 +3888,7 @@ export default class Meeting extends StatelessWebexPlugin {
         return join;
       })
       .then(async (join) => {
+        // @ts-ignore - config coming from registerPlugin
         if (this.config.enableAutomaticLLM) {
           await this.updateLLMConnection();
         }
@@ -3797,14 +3961,18 @@ export default class Meeting extends StatelessWebexPlugin {
    * @returns {Promise}
    */
   async updateLLMConnection() {
+    // @ts-ignore - Fix type
     const {url, info: {datachannelUrl} = {}} = this.locusInfo;
 
     const isJoined = this.joinedWith && this.joinedWith.state === 'JOINED';
 
+    // @ts-ignore - Fix type
     if (this.webex.internal.llm.isConnected()) {
+      // @ts-ignore - Fix type
       if (url === this.webex.internal.llm.getLocusUrl() && isJoined) {
         return undefined;
       }
+      // @ts-ignore - Fix type
       await this.webex.internal.llm.disconnectLLM();
     }
 
@@ -3812,6 +3980,7 @@ export default class Meeting extends StatelessWebexPlugin {
       return undefined;
     }
 
+    // @ts-ignore - Fix type
     return this.webex.internal.llm.registerAndConnect(url, datachannelUrl);
   }
 
@@ -4220,7 +4389,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @returns {Object}
    * @memberof Meetings
    */
-  getSupportedDevices = ({ sendAudio = true, sendVideo = true }: { sendAudio: boolean; sendVideo: boolean }) => Media.getSupportedDevice({ sendAudio, sendVideo });
+  getSupportedDevices = ({sendAudio = true, sendVideo = true}: { sendAudio: boolean; sendVideo: boolean }) => Media.getSupportedDevice({sendAudio, sendVideo});
 
   /**
    * Get the devices from the Media module
@@ -6098,7 +6267,7 @@ export default class Meeting extends StatelessWebexPlugin {
    * @private
    * @returns {undefined}
    */
-  private handleMediaLogging({ audioTrack, videoTrack }: any) {
+  private handleMediaLogging({audioTrack, videoTrack}: any) {
     MeetingUtil.handleVideoLogging(videoTrack);
     MeetingUtil.handleAudioLogging(audioTrack);
   }
@@ -6163,7 +6332,7 @@ export default class Meeting extends StatelessWebexPlugin {
    *
    * @returns {undefined}
    */
-   setStartLocalSDPGenRemoteSDPRecvDelay() {
+  setStartLocalSDPGenRemoteSDPRecvDelay() {
     if (!this.startLocalSDPGenRemoteSDPRecvDelay) {
       this.startLocalSDPGenRemoteSDPRecvDelay = performance.now();
       this.endLocalSDPGenRemoteSDPRecvDelay = undefined;
